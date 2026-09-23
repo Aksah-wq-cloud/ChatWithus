@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Akash • Chat</title>
+<title>Robin • Chat</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>\n<script src="./secret.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./secret.js"></script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -175,7 +176,7 @@ button,input{font:inherit}
   <div id="chat-shell" class="hidden">
     <header id="navbar">
       <div class="profile-name">
-        <div class="nav-pfp"><img id="pfpimg" src="" alt="Profile" onerror="this.src='pihu.jpg'"></div>
+        <div class="nav-pfp"><img id="pfpimg" src="" alt="Profile" onerror="this.src='aditi.jpg'"></div>
         <div class="friend-info">
           <div class="friendname" id="friend-name">Chat</div>
           <div class="online-status">online</div>
@@ -220,22 +221,20 @@ button,input{font:inherit}
 </div>
 
 <script>
-const SUPABASE_URL = "https://traxtzfuasfxniqcvtvh.supabase.co";
-const SUPABASE_KEY = "sb_publishable_LK3AfDDMpSmMb_dHbcQ9QA_VjDy7NaH";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const profiles = {
   "8303": {
-    senderName: "Pihu",
-    senderPfp: "pihu.jpg",
-    friendName: "Priyanshu",
-    friendPfp: "priyanshu.jpg"
+    senderName: "Aditi",
+    senderPfp: "aditi.jpg",
+    friendName: "Akash",
+    friendPfp: "akash.jpg"
   },
   "8948": {
-    senderName: "Priyanshu",
-    senderPfp: "priyanshu.jpg",
-    friendName: "Pihu",
-    friendPfp: "pihu.jpg"
+    senderName: "Akash",
+    senderPfp: "akash.jpg",
+    friendName: "Aditi",
+    friendPfp: "aditi.jpg"
   }
 };
 
@@ -243,7 +242,8 @@ let currentUserCode = "";
 let currentUser = null;
 let replyTo = null;
 let inactivityTimer = null;
-let realtimeChannel = null;\nlet activityListenersAttached = false;
+let realtimeChannel = null;
+let activityListenersAttached = false;
 
 const $ = id => document.getElementById(id);
 
@@ -409,7 +409,7 @@ function appendMessageToUI(msg){
 
   const avatar=document.createElement("div");
   avatar.className="message-pfp";
-  avatar.innerHTML=`<img src="${escapeHTML(pfp)}" alt="Profile" onerror="this.src='pihu.jpg'">`;
+  avatar.innerHTML=`<img src="${escapeHTML(pfp)}" alt="Profile" onerror="this.src='aditi.jpg'">`;
 
   if(outgoing){
     row.appendChild(wrap); row.appendChild(avatar);
