@@ -1,12 +1,526 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>akash</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Robin • Chat</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>\n<script src="./secret.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#3390ec;--blue2:#2a82d7;--bg:#dfe8f0;--panel:#fff;
+  --incoming:#fff;--outgoing:#effdde;--text:#17212b;--muted:#71808f;
+}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  background:var(--bg);color:var(--text);
+}
+button,input{font:inherit}
+.hidden{display:none!important}
+
+#app{width:100%;height:100%;display:flex;justify-content:center}
+#chat-shell{
+  width:100%;max-width:980px;height:100%;background:#dfe7ee;
+  display:flex;flex-direction:column;position:relative;overflow:hidden;
+  box-shadow:0 0 30px rgba(0,0,0,.12)
+}
+
+/* Telegram-like header */
+#navbar{
+  height:62px;flex:0 0 62px;background:var(--blue);color:#fff;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 12px;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,.18)
+}
+.profile-name{display:flex;align-items:center;gap:10px;min-width:0}
+.nav-pfp{width:46px;height:46px;border-radius:50%;overflow:hidden;flex:none;background:#c9d5df}
+.nav-pfp img{width:100%;height:100%;object-fit:cover;display:block}
+.friend-info{min-width:0}.friendname{font-weight:650;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.online-status{font-size:12px;opacity:.85;margin-top:2px}
+.header-actions{display:flex;gap:3px}
+.header-btn{border:0;background:transparent;color:#fff;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:18px}
+.header-btn:hover{background:rgba(255,255,255,.14)}
+
+/* Chat */
+#chatcontainer{
+  flex:1;overflow-y:auto;padding:18px 14px 12px;
+  display:flex;flex-direction:column;gap:7px;
+  background-color:#dfe8f0;
+  background-image:radial-gradient(rgba(80,100,120,.10) 1px,transparent 1px);
+  background-size:18px 18px;
+  scroll-behavior:smooth;
+}
+#chatcontainer::-webkit-scrollbar{width:6px}
+#chatcontainer::-webkit-scrollbar-thumb{background:#aab8c4;border-radius:10px}
+
+.date-separator{
+  align-self:center;background:rgba(90,105,120,.72);color:#fff;
+  font-size:11px;padding:5px 10px;border-radius:12px;margin:5px 0 8px
+}
+.message-row{width:100%;display:flex;align-items:flex-end;gap:7px}
+.message-row.incoming{justify-content:flex-start}
+.message-row.outgoing{justify-content:flex-end}
+
+.message-pfp{width:31px;height:31px;border-radius:50%;overflow:hidden;flex:none;background:#c7d1da}
+.message-pfp img{width:100%;height:100%;object-fit:cover;display:block}
+.message-wrap{max-width:min(72%,620px);position:relative}
+.message-bubble{
+  position:relative;padding:8px 10px 5px;border-radius:12px;
+  box-shadow:0 1px 2px rgba(0,0,0,.14);cursor:pointer;user-select:none;
+  overflow-wrap:anywhere;min-width:70px
+}
+.incoming .message-bubble{background:var(--incoming);border-bottom-left-radius:3px}
+.outgoing .message-bubble{background:var(--outgoing);border-bottom-right-radius:3px}
+.message-text{font-size:15px;line-height:1.35;white-space:pre-wrap;padding-right:4px}
+.message-meta{display:flex;justify-content:flex-end;align-items:center;gap:5px;margin-top:3px}
+.timestamp{font-size:10px;color:#7a8792}
+.message-actions{
+  display:none;position:absolute;right:6px;top:calc(100% + 4px);
+  background:#fff;border-radius:9px;box-shadow:0 4px 18px rgba(0,0,0,.18);
+  z-index:20;overflow:hidden;min-width:145px
+}
+.message-actions button{
+  display:flex;align-items:center;gap:9px;width:100%;border:0;background:#fff;
+  padding:10px 12px;color:#26343f;text-align:left;cursor:pointer;font-size:13px
+}
+.message-actions button:hover{background:#f1f4f6}
+.message-actions .delete-action{color:#e53935}
+.message-wrap.menu-open .message-actions{display:block}
+
+.reply-quote{
+  border-left:3px solid var(--blue);background:rgba(51,144,236,.08);
+  border-radius:5px;padding:5px 7px;margin-bottom:5px;font-size:12px;
+  color:#4e5d68;max-width:100%;overflow:hidden
+}
+.reply-quote strong{display:block;color:var(--blue);font-size:11px;margin-bottom:1px}
+.reply-quote div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+#reply-preview{
+  flex:none;background:#fff;border-top:1px solid #d7dee5;padding:8px 12px;
+  display:none;align-items:center;gap:9px
+}
+#reply-preview.show{display:flex}
+.reply-line{width:3px;height:35px;background:var(--blue);border-radius:3px}
+.reply-preview-text{min-width:0;flex:1}
+.reply-preview-text strong{font-size:12px;color:var(--blue);display:block}
+.reply-preview-text div{font-size:12px;color:#6c7984;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#cancel-reply{border:0;background:transparent;color:#6c7984;width:35px;height:35px;border-radius:50%;cursor:pointer}
+
+/* Input */
+.chat-input-bar{
+  flex:none;min-height:64px;background:#f4f6f8;border-top:1px solid #d5dde4;
+  display:flex;align-items:center;gap:7px;padding:8px 10px;
+  padding-bottom:max(8px,env(safe-area-inset-bottom));z-index:10
+}
+.icon-btn{border:0;background:transparent;color:#6d7b87;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:19px}
+.icon-btn:hover{background:#e5eaee}
+.message-input{
+  flex:1;border:0;outline:0;background:#fff;border-radius:20px;
+  padding:10px 15px;font-size:15px;min-width:0;box-shadow:0 1px 2px rgba(0,0,0,.08)
+}
+#send-btn{background:var(--blue);color:#fff;width:42px;height:42px}
+#send-btn:hover{background:var(--blue2)}
+
+/* Access modal */
+#access-overlay{
+  position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#172b46);
+  display:flex;align-items:center;justify-content:center;padding:20px;z-index:99999
+}
+.access-card{
+  width:min(390px,100%);background:#fff;border-radius:22px;padding:27px 24px;
+  box-shadow:0 24px 70px rgba(0,0,0,.35);text-align:center
+}
+.access-icon{
+  width:68px;height:68px;border-radius:20px;background:#e8f3ff;color:var(--blue);
+  display:grid;place-items:center;font-size:28px;margin:0 auto 15px
+}
+.access-card h2{font-size:22px;margin-bottom:6px}
+.access-card p{font-size:13px;color:#71808f;margin-bottom:18px}
+#access-key{
+  width:100%;height:48px;border:1px solid #d8e0e7;border-radius:13px;
+  padding:0 14px;outline:0;font-size:16px;text-align:center;letter-spacing:2px
+}
+#access-key:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(51,144,236,.12)}
+#unlock-btn{
+  width:100%;height:46px;border:0;border-radius:13px;background:var(--blue);
+  color:#fff;font-weight:650;margin-top:10px;cursor:pointer
+}
+#access-error{height:18px;color:#e53935;font-size:12px;margin-top:8px}
+.access-note{font-size:11px!important;margin:14px 0 0!important;color:#9aa6b0!important}
+
+/* Mobile */
+@media (max-width:600px){
+  #chat-shell{max-width:none}
+  #navbar{height:58px;flex-basis:58px;padding:5px 7px}
+  .nav-pfp{width:43px;height:43px}.friendname{font-size:15px}
+  #chatcontainer{padding:12px 8px 9px;gap:6px}
+  .message-wrap{max-width:82%}
+  .message-pfp{width:29px;height:29px}
+  .message-text{font-size:14.5px}
+  .chat-input-bar{min-height:60px;padding:7px 7px}
+  .icon-btn{width:38px;height:38px}
+  #send-btn{width:40px;height:40px}
+  .message-actions{min-width:135px}
+}
+@media (max-width:380px){
+  .header-btn{width:37px}.message-wrap{max-width:86%}
+}
+</style>
 </head>
+
 <body>
-    <h1>Hello Wolrd!</h1>
-    <p>wlc to Akash's Chat.</p>
+<div id="app">
+  <div id="chat-shell" class="hidden">
+    <header id="navbar">
+      <div class="profile-name">
+        <div class="nav-pfp"><img id="pfpimg" src="" alt="Profile" onerror="this.src='pihu.jpg'"></div>
+        <div class="friend-info">
+          <div class="friendname" id="friend-name">Chat</div>
+          <div class="online-status">online</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" title="Search" onclick="focusSearch()"><i class="fa-solid fa-magnifying-glass"></i></button>
+        <button class="header-btn" title="More"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+      </div>
+    </header>
+
+    <main id="chatcontainer"></main>
+
+    <div id="reply-preview">
+      <div class="reply-line"></div>
+      <div class="reply-preview-text">
+        <strong id="reply-preview-name">Reply</strong>
+        <div id="reply-preview-message"></div>
+      </div>
+      <button id="cancel-reply" title="Cancel reply"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <footer class="chat-input-bar">
+      <button class="icon-btn" title="Emoji"><i class="fa-regular fa-face-smile"></i></button>
+      <input id="chat-input" class="message-input" type="text" placeholder="Message" autocomplete="off">
+      <button id="send-btn" class="icon-btn" title="Send"><i class="fa-solid fa-paper-plane"></i></button>
+    </footer>
+  </div>
+</div>
+
+<!-- Key popup: calculator removed -->
+<div id="access-overlay">
+  <div class="access-card">
+    <div class="access-icon"><i class="fa-solid fa-lock"></i></div>
+    <h2>Private Chat</h2>
+    <p>Enter your access key to continue</p>
+    <input id="access-key" type="password" inputmode="numeric" maxlength="12" placeholder="Enter key">
+    <button id="unlock-btn">Unlock Chat</button>
+    <div id="access-error"></div>
+    <p class="access-note">Enter the correct access key to open this chat.</p>
+  </div>
+</div>
+
+<script>
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const profiles = {
+  "8303": {
+    senderName: "Pihu",
+    senderPfp: "pihu.jpg",
+    friendName: "Priyanshu",
+    friendPfp: "priyanshu.jpg"
+  },
+  "8948": {
+    senderName: "Priyanshu",
+    senderPfp: "priyanshu.jpg",
+    friendName: "Pihu",
+    friendPfp: "pihu.jpg"
+  }
+};
+
+let currentUserCode = "";
+let currentUser = null;
+let replyTo = null;
+let inactivityTimer = null;
+let realtimeChannel = null;\nlet activityListenersAttached = false;
+
+const $ = id => document.getElementById(id);
+
+function escapeHTML(value=""){
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
+
+function formatTime(date){
+  return new Date(date).toLocaleTimeString([],{
+    hour:"2-digit",minute:"2-digit"
+  });
+}
+
+function formatDate(date){
+  const d=new Date(date), today=new Date();
+  if(d.toDateString()===today.toDateString()) return "Today";
+  return d.toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"});
+}
+
+function renderNavbar(){
+  $("friend-name").textContent=currentUser.friendName;
+  $("pfpimg").src=currentUser.friendPfp;
+}
+
+function openChat(){
+  $("access-overlay").classList.add("hidden");
+  $("chat-shell").classList.remove("hidden");
+  renderNavbar();
+  loadMessages();
+  startInactivityTimer();
+}
+
+function showAccess(){
+  clearTimeout(inactivityTimer);
+  $("chat-shell").classList.add("hidden");
+  $("access-overlay").classList.remove("hidden");
+  $("access-key").value="";
+  $("access-error").textContent="";
+  setTimeout(()=>$("access-key").focus(),80);
+}
+
+function tryUnlock(){
+  const key=$("access-key").value.trim();
+  if(profiles[key]){
+    currentUserCode=key;
+    currentUser=profiles[key];
+    openChat();
+  }else{
+    $("access-error").textContent="Invalid key. Please try again.";
+    $("access-key").select();
+  }
+}
+
+$("unlock-btn").addEventListener("click",tryUnlock);
+$("access-key").addEventListener("keydown",e=>{if(e.key==="Enter")tryUnlock();});
+
+function startInactivityTimer(){
+  const reset=()=>{
+    clearTimeout(inactivityTimer);
+    inactivityTimer=setTimeout(showAccess,5*60*1000);
+  };
+  if(!activityListenersAttached){
+    ["click","touchstart","keydown","scroll"].forEach(ev=>{
+      document.addEventListener(ev,reset,{passive:true});
+    });
+    activityListenersAttached=true;
+  }
+  reset();
+}
+
+function setReply(msg){
+  replyTo={
+    id:msg.id,
+    sender:msg.sender,
+    text:msg.message
+  };
+  $("reply-preview-name").textContent=msg.sender;
+  $("reply-preview-message").textContent=msg.message;
+  $("reply-preview").classList.add("show");
+  $("chat-input").focus();
+}
+
+function clearReply(){
+  replyTo=null;
+  $("reply-preview").classList.remove("show");
+}
+$("cancel-reply").addEventListener("click",clearReply);
+
+function closeMenus(){
+  document.querySelectorAll(".message-wrap.menu-open").forEach(el=>el.classList.remove("menu-open"));
+}
+document.addEventListener("click",e=>{
+  if(!e.target.closest(".message-wrap")) closeMenus();
+});
+
+function appendMessageToUI(msg){
+  const chat=$("chatcontainer");
+  if(!chat) return;
+
+  const outgoing=msg.sender===currentUser.senderName;
+  const pfp=outgoing?currentUser.senderPfp:currentUser.friendPfp;
+  const time=msg.created_at?formatTime(msg.created_at):(msg.time||formatTime(Date.now()));
+  const replyBlock=msg.reply_to_message
+    ? `<div class="reply-quote"><strong>${escapeHTML(msg.reply_to_message.sender)}</strong><div>${escapeHTML(msg.reply_to_message.message)}</div></div>`
+    : "";
+
+  const row=document.createElement("div");
+  row.className=`message-row ${outgoing?"outgoing":"incoming"}`;
+  row.dataset.id=msg.id;
+
+  const wrap=document.createElement("div");
+  wrap.className="message-wrap";
+
+  const bubble=document.createElement("div");
+  bubble.className="message-bubble";
+  bubble.dataset.id=msg.id;
+  bubble.innerHTML=`
+    ${replyBlock}
+    <div class="message-text">${escapeHTML(msg.message)}</div>
+    <div class="message-meta"><span class="timestamp">${escapeHTML(time)}</span></div>
+  `;
+
+  let lastTap=0;
+  bubble.addEventListener("click",e=>{
+    e.stopPropagation();
+    const now=Date.now();
+    if(now-lastTap<330){
+      closeMenus();
+      setReply(msg);
+    }
+    lastTap=now;
+  });
+
+  const menu=document.createElement("div");
+  menu.className="message-actions";
+  menu.innerHTML=`
+    <button class="reply-action"><i class="fa-solid fa-reply"></i> Reply</button>
+    ${outgoing?`<button class="delete-action"><i class="fa-solid fa-trash"></i> Delete</button>`:""}
+  `;
+  menu.querySelector(".reply-action").onclick=e=>{
+    e.stopPropagation(); closeMenus(); setReply(msg);
+  };
+  const del=menu.querySelector(".delete-action");
+  if(del) del.onclick=e=>{
+    e.stopPropagation(); deleteMessage(msg.id,row);
+  };
+
+  // Long press / right click opens the small message menu.
+  let pressTimer;
+  bubble.addEventListener("contextmenu",e=>{
+    e.preventDefault(); closeMenus(); wrap.classList.add("menu-open");
+  });
+  bubble.addEventListener("touchstart",()=>{
+    pressTimer=setTimeout(()=>{closeMenus();wrap.classList.add("menu-open")},550);
+  },{passive:true});
+  bubble.addEventListener("touchend",()=>clearTimeout(pressTimer),{passive:true});
+  bubble.addEventListener("touchmove",()=>clearTimeout(pressTimer),{passive:true});
+
+  wrap.appendChild(bubble);
+  wrap.appendChild(menu);
+
+  const avatar=document.createElement("div");
+  avatar.className="message-pfp";
+  avatar.innerHTML=`<img src="${escapeHTML(pfp)}" alt="Profile" onerror="this.src='pihu.jpg'">`;
+
+  if(outgoing){
+    row.appendChild(wrap); row.appendChild(avatar);
+  }else{
+    row.appendChild(avatar); row.appendChild(wrap);
+  }
+
+  chat.appendChild(row);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function renderDateSeparator(date){
+  const el=document.createElement("div");
+  el.className="date-separator";
+  el.textContent=formatDate(date);
+  $("chatcontainer").appendChild(el);
+}
+
+async function loadMessages(){
+  const {data:messages,error}=await supabaseClient
+    .from("messages").select("*").order("id",{ascending:true});
+
+  if(error){
+    console.error("Error loading messages:",error);
+    return;
+  }
+
+  $("chatcontainer").innerHTML="";
+  let lastDate="";
+  const list=messages||[];
+
+  // Reply information is optional so the UI still works with old rows.
+  for(const msg of list){
+    const dateKey=msg.created_at?new Date(msg.created_at).toDateString():"";
+    if(dateKey && dateKey!==lastDate){renderDateSeparator(msg.created_at);lastDate=dateKey;}
+    let replyInfo=null;
+    if(msg.reply_to){
+      const original=list.find(x=>String(x.id)===String(msg.reply_to));
+      if(original) replyInfo={sender:original.sender,message:original.message};
+    }
+    appendMessageToUI({...msg,reply_to_message:replyInfo});
+  }
+}
+
+async function sendMessage(){
+  if(!currentUser){
+    showAccess();
+    return;
+  }
+  const input=$("chat-input");
+  const text=input.value.trim();
+  if(!text)return;
+
+  const row={
+    sender:currentUser.senderName,
+    message:text
+  };
+  if(replyTo) row.reply_to=replyTo.id;
+
+  input.value="";
+  clearReply();
+
+  const {data,error}=await supabaseClient.from("messages").insert([row]).select().single();
+  if(error){
+    console.error("Database Insert Error:",error);
+    alert("Message send nahi hua. Supabase table/RLS policies check karein.");
+    return;
+  }
+  // Realtime may also deliver it; do not manually append if realtime is active.
+  if(!realtimeChannel) appendMessageToUI(data||{...row,created_at:Date.now(),id:"local-"+Date.now()});
+}
+
+$("chat-input").addEventListener("keydown",e=>{
+  if(e.key==="Enter" && !e.shiftKey){e.preventDefault();sendMessage();}
+});
+$("send-btn").addEventListener("click",sendMessage);
+
+async function deleteMessage(id,row){
+  if(!currentUser || !id || !row)return;
+  if(!confirm("Delete this message?"))return;
+  const {error}=await supabaseClient.from("messages").delete().eq("id",id);
+  if(error){
+    console.error("Delete Error:",error);
+    alert("Message delete nahi hua. Supabase DELETE policy check karein.");
+    return;
+  }
+  row.remove();
+}
+
+async function setupRealtime(){
+  realtimeChannel=supabaseClient.channel("messages-channel")
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},async payload=>{
+      if(!currentUser)return;
+      const row=payload.new;
+      if(document.querySelector(`.message-row[data-id="${CSS.escape(String(row.id))}"]`))return;
+      await loadMessages();
+    })
+    .on("postgres_changes",{event:"DELETE",schema:"public",table:"messages"},async payload=>{
+      const row=document.querySelector(`.message-row[data-id="${CSS.escape(String(payload.old.id))}"]`);
+      if(row)row.remove();
+      else await loadMessages();
+    }).subscribe((status)=>{
+      if(status === "CHANNEL_ERROR" || status === "TIMED_OUT"){
+        console.error("Supabase Realtime status:", status);
+      }
+    });
+}
+setupRealtime();
+
+function focusSearch(){
+  // Kept as a simple mobile-friendly action; browser find is not needed.
+  $("chat-input").focus();
+}
+</script>
 </body>
 </html>
